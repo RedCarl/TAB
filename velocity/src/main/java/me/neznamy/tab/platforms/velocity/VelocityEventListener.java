@@ -26,8 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * The core for Velocity forwarding events into all enabled features
  */
-@SuppressWarnings("UnstableApiUsage")
 public class VelocityEventListener implements EventListener<Player> {
+
+    /** Whether plugin should be compensating for bossbar bug that may or may not be fixed soon (it was fixed in a fork) */
+    private static final boolean BOSSBAR_BUG_COMPENSATION = true;
 
     /** Map for tracking online players */
     private final Map<Player, UUID> players = new ConcurrentHashMap<>();
@@ -56,10 +58,11 @@ public class VelocityEventListener implements EventListener<Player> {
      */
     @Subscribe
     public void preConnect(@NotNull ServerPreConnectEvent e) {
+        if (!BOSSBAR_BUG_COMPENSATION) return;
         if (TAB.getInstance().isPluginDisabled()) return;
         if (e.getResult().isAllowed()) {
             TabPlayer p = TAB.getInstance().getPlayer(e.getPlayer().getUniqueId());
-            if (p != null && p.getVersion().getNetworkId() >= ProtocolVersion.V1_20_2.getNetworkId()) {
+            if (p != null && p.getVersionId() >= ProtocolVersion.V1_20_2.getNetworkId()) {
                 ((SafeBossBar<?>)p.getBossBar()).freeze();
             }
         }
@@ -88,7 +91,7 @@ public class VelocityEventListener implements EventListener<Player> {
                         Server.byName(e.getPlayer().getCurrentServer().map(s -> s.getServerInfo().getName()).orElse("null"))
                 );
                 tab.getFeatureManager().onTabListClear(player);
-                if (player.getVersion().getNetworkId() >= ProtocolVersion.V1_20_2.getNetworkId()) {
+                if (BOSSBAR_BUG_COMPENSATION && player.getVersionId() >= ProtocolVersion.V1_20_2.getNetworkId()) {
                     ((SafeBossBar<?>)player.getBossBar()).unfreezeAndResend();
                 }
             }

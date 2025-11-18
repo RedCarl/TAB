@@ -1,7 +1,7 @@
 package me.neznamy.tab.platforms.sponge;
 
 import lombok.NonNull;
-import me.neznamy.chat.component.TabComponent;
+import me.neznamy.tab.shared.chat.component.TabComponent;
 import me.neznamy.tab.shared.platform.decorators.TrackedTabList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,7 +87,7 @@ public class SpongeTabList extends TrackedTabList<SpongeTabPlayer> {
     }
 
     @Override
-    public void setPlayerListHeaderFooter(@NonNull TabComponent header, @NonNull TabComponent footer) {
+    public void setPlayerListHeaderFooter0(@NonNull TabComponent header, @NonNull TabComponent footer) {
         player.getPlayer().tabList().setHeaderAndFooter(header.toAdventure(), footer.toAdventure());
     }
 
@@ -112,10 +112,27 @@ public class SpongeTabList extends TrackedTabList<SpongeTabPlayer> {
     @Override
     public void checkDisplayNames() {
         for (TabListEntry entry : player.getPlayer().tabList().entries()) {
-            TabComponent expectedComponent = getExpectedDisplayNames().get(entry.profile().uniqueId());
+            TabComponent expectedComponent = getForcedDisplayNames().get(entry.profile().uniqueId());
             if (expectedComponent != null && entry.displayName().orElse(null) != expectedComponent.toAdventure()) {
                 entry.setDisplayName(expectedComponent.toAdventure());
             }
         }
+    }
+
+    @Override
+    public void checkGameModes() {
+        for (TabListEntry entry : player.getPlayer().tabList().entries()) {
+            Integer forcedGameMode = getForcedGameModes().get(entry.profile().uniqueId());
+            if (forcedGameMode != null && getGamemode(entry.gameMode()) != forcedGameMode) {
+                entry.setGameMode(gameModes[forcedGameMode]);
+            }
+        }
+    }
+
+    private int getGamemode(@NonNull GameMode gameMode) {
+        if (gameMode == GameModes.CREATIVE.get()) return 1;
+        if (gameMode == GameModes.ADVENTURE.get()) return 2;
+        if (gameMode == GameModes.SPECTATOR.get()) return 3;
+        return 0;
     }
 }

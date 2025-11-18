@@ -1,6 +1,7 @@
 package me.neznamy.tab.shared.config.mysql;
 
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import me.neznamy.tab.shared.TAB;
 import me.neznamy.tab.shared.TabConstants;
 import me.neznamy.tab.shared.config.PropertyConfiguration;
@@ -39,22 +40,21 @@ public class MySQLGroupConfiguration implements PropertyConfiguration {
             String world = crs.getString("world");
             String server = crs.getString("server");
             setProperty0(group, property, Server.byName(server), World.byName(world), value);
-            checkProperty("MySQL", "group", group, property, Server.byName(server), World.byName(world), true);
+            checkProperty("MySQL", "group", group, property, server, world, true);
         }
     }
 
     @Override
+    @SneakyThrows
     public void setProperty(@NonNull String group, @NonNull String property, @Nullable Server server, @Nullable World world, @Nullable String value) {
         String lowercaseGroup = group.equals(TabConstants.DEFAULT_GROUP) ? group : group.toLowerCase(Locale.US);
-        try {
-            if (getProperty(lowercaseGroup, property, server, world) != null) {
-                mysql.execute("delete from `tab_groups` where `group` = ? and `property` = ? and world " + querySymbol(world == null) + " ? and server " + querySymbol(server == null) + " ?", lowercaseGroup, property, world, server);
-            }
-            setProperty0(lowercaseGroup, property, server, world, value);
-            if (value != null) mysql.execute("insert into `tab_groups` (`group`, `property`, `value`, `world`, `server`) values (?, ?, ?, ?, ?)", lowercaseGroup, property, value, world, server);
-        } catch (SQLException e) {
-            TAB.getInstance().getErrorManager().mysqlQueryFailed(e);
+        if (getProperty(lowercaseGroup, property, server, world) != null) {
+            mysql.execute("delete from `tab_groups` where `group` = ? and `property` = ? and world " + querySymbol(world == null) + " ? and server " + querySymbol(server == null) + " ?",
+                    lowercaseGroup, property, world == null ? null : world.getName(), server == null ? null : server.getName());
         }
+        setProperty0(lowercaseGroup, property, server, world, value);
+        if (value != null) mysql.execute("insert into `tab_groups` (`group`, `property`, `value`, `world`, `server`) values (?, ?, ?, ?, ?)",
+                lowercaseGroup, property, value, world == null ? null : world.getName(), server == null ? null : server.getName());
     }
     
     private String querySymbol(boolean isNull) {
@@ -84,10 +84,10 @@ public class MySQLGroupConfiguration implements PropertyConfiguration {
             return new String[] {toString(value), String.format("group=%s,world=%s", TabConstants.DEFAULT_GROUP, worldName)};
         }
         if ((value = perServer.getOrDefault(serverName, new HashMap<>()).getOrDefault(lowercaseGroup, new HashMap<>()).get(property)) != null) {
-            return new String[] {toString(value), String.format("group=%s,server=%s", lowercaseGroup, server)};
+            return new String[] {toString(value), String.format("group=%s,server=%s", lowercaseGroup, serverName)};
         }
         if ((value = perServer.getOrDefault(serverName, new HashMap<>()).getOrDefault(TabConstants.DEFAULT_GROUP, new HashMap<>()).get(property)) != null) {
-            return new String[] {toString(value), String.format("group=%s,server=%s", TabConstants.DEFAULT_GROUP, server)};
+            return new String[] {toString(value), String.format("group=%s,server=%s", TabConstants.DEFAULT_GROUP, serverName)};
         }
         if ((value = values.getOrDefault(lowercaseGroup, new HashMap<>()).get(property)) != null) {
             return new String[] {toString(value), String.format("group=%s", lowercaseGroup)};

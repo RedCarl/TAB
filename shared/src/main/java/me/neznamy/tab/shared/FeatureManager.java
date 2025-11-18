@@ -50,9 +50,6 @@ public class FeatureManager {
     @NotNull
     private TabFeature[] values = new TabFeature[0];
 
-    /** Flag tracking presence of a feature listening to latency change for faster check with better performance */
-    private boolean hasLatencyChangeListener;
-
     /** Flag tracking presence of a feature listening to command preprocess for faster check with better performance */
     private boolean hasCommandListener;
 
@@ -164,7 +161,7 @@ public class FeatureManager {
             }
         }
         TAB.getInstance().removePlayer(disconnectedPlayer);
-        removeExpectedDisplayName(disconnectedPlayer.getTablistId());
+        removeforcedDisplayName(disconnectedPlayer.getTablistId());
         TAB.getInstance().debug("Player quit of " + disconnectedPlayer.getName() + " processed in " + (System.currentTimeMillis()-millis) + "ms");
 
         ProxySupport proxy = getFeature(TabConstants.Feature.PROXY_SUPPORT);
@@ -176,7 +173,7 @@ public class FeatureManager {
         }
     }
 
-    private void removeExpectedDisplayName(@NotNull UUID id) {
+    private void removeforcedDisplayName(@NotNull UUID id) {
         ProxySupport proxy = getFeature(TabConstants.Feature.PROXY_SUPPORT);
         if (proxy != null) {
             ProxyPlayer proxyPlayer = proxy.getProxyPlayers().get(id);
@@ -187,7 +184,8 @@ public class FeatureManager {
 
         // Player is actually not online anymore, remove to avoid memory leak
         for (TabPlayer all : TAB.getInstance().getOnlinePlayers()) {
-            ((TrackedTabList<?>)all.getTabList()).getExpectedDisplayNames().remove(id);
+            ((TrackedTabList<?>)all.getTabList()).getForcedDisplayNames().remove(id);
+            ((TrackedTabList<?>)all.getTabList()).getForcedGameModes().remove(id);
         }
     }
 
@@ -257,6 +255,7 @@ public class FeatureManager {
         Server from = changed.server;
         changed.server = to;
         ((ProxyTabPlayer)changed).sendJoinPluginMessage();
+        ((TrackedTabList<?>)changed.getTabList()).resendHeaderFooter();
         for (TabFeature f : values) {
             if (!(f instanceof ServerSwitchListener)) continue;
             TimedCaughtTask task = new TimedCaughtTask(TAB.getInstance().getCpu(),
@@ -378,29 +377,6 @@ public class FeatureManager {
     }
 
     /**
-     * Forwards latency change to all features and returns new latency to use.
-     *
-     * @param   packetReceiver
-     *          Player who received the packet
-     * @param   id
-     *          UUID of player whose ping changed
-     * @param   latency
-     *          Latency in the packet
-     * @return  New latency to use
-     */
-    public int onLatencyChange(TabPlayer packetReceiver, UUID id, int latency) {
-        if (!hasLatencyChangeListener) return latency;
-        int newLatency = latency;
-        for (TabFeature f : values) {
-            if (!(f instanceof LatencyListener)) continue;
-            long time = System.nanoTime();
-            newLatency = ((LatencyListener)f).onLatencyChange(packetReceiver, id, newLatency);
-            TAB.getInstance().getCPUManager().addTime(f.getFeatureName(), CpuUsageCategory.PING_CHANGE, System.nanoTime() - time);
-        }
-        return newLatency;
-    }
-
-    /**
      * Forwards tablist clear to all enabled features.
      *
      * @param   packetReceiver
@@ -500,7 +476,7 @@ public class FeatureManager {
                 task.run();
             }
         }
-        removeExpectedDisplayName(disconnectedPlayer.getTablistId());
+        removeforcedDisplayName(disconnectedPlayer.getTablistId());
     }
 
     /**
@@ -538,9 +514,6 @@ public class FeatureManager {
         }
         if (featureHandler instanceof GameModeListener) {
             TAB.getInstance().getPlaceholderManager().addUsedPlaceholder(TabConstants.Placeholder.GAMEMODE);
-        }
-        if (featureHandler instanceof LatencyListener) {
-            hasLatencyChangeListener = true;
         }
         if (featureHandler instanceof CommandListener) {
             hasCommandListener = true;

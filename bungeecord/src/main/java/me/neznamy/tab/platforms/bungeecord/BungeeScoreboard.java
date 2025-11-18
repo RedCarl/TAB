@@ -2,7 +2,7 @@ package me.neznamy.tab.platforms.bungeecord;
 
 import com.google.common.collect.Lists;
 import lombok.NonNull;
-import me.neznamy.chat.component.TabComponent;
+import me.neznamy.tab.shared.chat.component.TabComponent;
 import me.neznamy.tab.shared.Limitations;
 import me.neznamy.tab.shared.ProtocolVersion;
 import me.neznamy.tab.shared.TAB;
@@ -85,7 +85,7 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
 
     @Override
     public void removeScore(@NonNull Score score) {
-        if (player.getVersion().getNetworkId() >= ProtocolVersion.V1_20_3.getNetworkId()) {
+        if (player.getVersionId() >= ProtocolVersion.V1_20_3.getNetworkId()) {
             player.sendPacket(new ScoreboardScoreReset(score.getHolder(), score.getObjective().getName()));
         } else {
             player.sendPacket(new ScoreboardScore(score.getHolder(), (byte) ScoreAction.REMOVE, score.getObjective().getName(), 0, null, null));
@@ -122,7 +122,7 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
                 either(team.getSuffix(), Limitations.TEAM_PREFIX_SUFFIX_PRE_1_13),
                 convertVisibility(team.getVisibility()),
                 convertCollision(team.getCollision()),
-                player.getVersion().getMinorVersion() >= TEAM_REWORK_VERSION ? team.getColor().getLegacyColor().ordinal() : 0,
+                player.getVersion().getMinorVersion() >= TEAM_REWORK_VERSION ? team.getColor().ordinal() : 0,
                 (byte) team.getOptions(),
                 team.getPlayers().toArray(new String[0])
         ));
@@ -130,7 +130,7 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
 
     @NotNull
     private Either<String, NameTagVisibility> convertVisibility(@NotNull NameVisibility visibility) {
-        if (player.getVersion().getNetworkId() >= ProtocolVersion.V1_21_5.getNetworkId()) {
+        if (player.getVersionId() >= ProtocolVersion.V1_21_5.getNetworkId()) {
             return Either.right(NameTagVisibility.valueOf(visibility.name()));
         } else {
             return Either.left(visibility.toString());
@@ -139,7 +139,7 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
 
     @NotNull
     private Either<String, net.md_5.bungee.protocol.packet.Team.CollisionRule> convertCollision(@NotNull CollisionRule collision) {
-        if (player.getVersion().getNetworkId() >= ProtocolVersion.V1_21_5.getNetworkId()) {
+        if (player.getVersionId() >= ProtocolVersion.V1_21_5.getNetworkId()) {
             return Either.right(net.md_5.bungee.protocol.packet.Team.CollisionRule.valueOf(collision.name()));
         } else {
             return Either.left(collision.toString());
@@ -147,7 +147,8 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
     }
 
     @Override
-    public void onPacketSend(@NonNull Object packet) {
+    @NotNull
+    public Object onPacketSend(@NonNull Object packet) {
         if (packet instanceof ScoreboardDisplay) {
             ScoreboardDisplay display = (ScoreboardDisplay) packet;
             TAB.getInstance().getFeatureManager().onDisplayObjective(player, display.getPosition(), display.getName());
@@ -158,10 +159,12 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
         }
         if (packet instanceof net.md_5.bungee.protocol.packet.Team) {
             net.md_5.bungee.protocol.packet.Team team = (net.md_5.bungee.protocol.packet.Team) packet;
-            if (team.getMode() == TeamAction.UPDATE) return;
-            List<String> players = team.getPlayers() == null ? Collections.emptyList() : Lists.newArrayList(team.getPlayers());
-            team.setPlayers(onTeamPacket(team.getMode(), team.getName(), players).toArray(new String[0]));
+            if (team.getMode() != TeamAction.UPDATE) {
+                List<String> players = team.getPlayers() == null ? Collections.emptyList() : Lists.newArrayList(team.getPlayers());
+                team.setPlayers(onTeamPacket(team.getMode(), team.getName(), players).toArray(new String[0]));
+            }
         }
+        return packet;
     }
 
     @NotNull
@@ -175,6 +178,7 @@ public class BungeeScoreboard extends SafeScoreboard<BungeeTabPlayer> {
 
     @Nullable
     private NumberFormat numberFormat(@Nullable TabComponent component) {
-        return component == null ? null : component.toFixedFormat(baseComponent -> new NumberFormat(NumberFormat.Type.FIXED, baseComponent));
+        return component == null ? null : component.toFixedFormat(baseComponentArray ->
+                new NumberFormat(NumberFormat.Type.FIXED, player.getPlatform().pickCorrectComponent((BaseComponent[]) baseComponentArray, player.getVersion())));
     }
 }

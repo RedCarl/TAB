@@ -39,7 +39,7 @@ TAB's shared module is compiled with Java 8. For the platforms themselves, TAB d
         </tr>
         <tr>
             <td rowspan=1><a href="https://www.spongepowered.org/">Sponge</a></td>
-            <td>✔ (1.20.6 - 1.21.7)</td>
+            <td>✔ (1.20.6 - 1.21.8)</td>
         </tr>
     </tbody>
     <tbody>
@@ -70,7 +70,7 @@ TAB's shared module is compiled with Java 8. For the platforms themselves, TAB d
     </tbody>
 </table>
 
-<sup>1</sup> Modded platforms only support the latest MC version(s). For older MC versions try [modrinth](https://modrinth.com/plugin/tab-was-taken)'s version download filter. If your desired version is not available, you may request it.
+<sup>1</sup> Modded platforms only support the latest MC version(s). For older MC versions try [modrinth](https://modrinth.com/plugin/tab-was-taken)'s version download filter. If TAB is not available for your desired Minecraft version or is very outdated, you may [request a backport](https://github.com/NEZNAMY/TAB/issues/new?template=backport.yml).
 
 <sup>2</sup> Latest only doesn't mean only the latest build will work,
 it means the plugin was made to be compatible with the latest version/build.
@@ -150,7 +150,6 @@ Sending scoreboard packets (scoreboard-teams, belowname-objective, playerlist-ob
   For example, here are a few bugs in LunarClient / FeatherClient that you may run into when using TAB:
   * They add their icon to players in tablist, but don't widen the entries. This results in player names overlapping with latency bar. You can avoid this by configuring some spaces in tabsuffix.
   * They don't support color field in chat components, which means they don't support RGB codes and will display bossbar without colors as well.
-  * Bossbar is not visible on 1.8.
   * Rendering belowname 3 times.
   * They don't respect nametag visibility rule, showing their own nametag using F5 even if set to invisible by the plugin.
   * When the scoreboard is set to use all 0s, lines are rendered in opposite order on 1.20.3+.

@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -47,6 +48,9 @@ public abstract class ProxySupport extends TabFeature implements JoinListener, Q
     @NotNull private final Map<String, Function<ByteArrayDataInput, ProxyMessage>> stringToClass = new HashMap<>();
     @NotNull private final Map<Class<? extends ProxyMessage>, String> classToString = new HashMap<>();
 
+    /** ID generator for messages requiring an ID */
+    private final AtomicLong idCounter = new AtomicLong(0);
+
     protected ProxySupport() {
         registerMessage(Load.class, Load::new);
         registerMessage(LoadRequest.class, in -> new LoadRequest());
@@ -54,6 +58,7 @@ public abstract class ProxySupport extends TabFeature implements JoinListener, Q
         registerMessage(PlayerQuit.class, PlayerQuit::new);
         registerMessage(ServerSwitch.class, ServerSwitch::new);
         registerMessage(UpdateVanishStatus.class, UpdateVanishStatus::new);
+        TAB.getInstance().debug("[Proxy Support] Using channel name: " + TabConstants.PROXY_CHANNEL_NAME);
     }
 
     @NotNull
@@ -188,12 +193,12 @@ public abstract class ProxySupport extends TabFeature implements JoinListener, Q
 
     @Override
     public void onServerChange(@NotNull TabPlayer p, @NotNull Server from, @NotNull Server to) {
-        sendMessage(new ServerSwitch(p.getTablistId(), to));
+        sendMessage(new ServerSwitch(p.getUniqueId(), to));
     }
 
     @Override
     public void onQuit(@NotNull TabPlayer p) {
-        sendMessage(new PlayerQuit(p.getTablistId()));
+        sendMessage(new PlayerQuit(p.getUniqueId()));
     }
 
     /**
@@ -226,6 +231,6 @@ public abstract class ProxySupport extends TabFeature implements JoinListener, Q
 
     @Override
     public void onVanishStatusChange(@NotNull TabPlayer player) {
-        sendMessage(new UpdateVanishStatus(player.getTablistId(), player.isVanished()));
+        sendMessage(new UpdateVanishStatus(player.getUniqueId(), player.isVanished()));
     }
 }
