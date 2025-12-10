@@ -108,6 +108,12 @@ public class PaperPacketTabList extends TrackedTabList<BukkitTabPlayer> {
     @Override
     @NotNull
     public Object onPacketSend(@NonNull Object packet) {
+        if (packet instanceof ClientboundTabListPacket tablist) {
+            if (header == null || footer == null) return packet;
+            if (tablist.header() != header.convert() || tablist.footer() != footer.convert()) {
+                return new ClientboundTabListPacket(header.convert(), footer.convert());
+            }
+        }
         if (packet instanceof ClientboundPlayerInfoUpdatePacket info) {
             EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = info.actions();
             List<ClientboundPlayerInfoUpdatePacket.Entry> updatedList = new ArrayList<>();
@@ -125,9 +131,8 @@ public class PaperPacketTabList extends TrackedTabList<BukkitTabPlayer> {
                     }
                 }
                 if (actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_GAME_MODE)) {
-                    Integer forcedGameMode = getForcedGameModes().get(nmsData.profileId());
-                    if (forcedGameMode != null && forcedGameMode != gameMode) {
-                        gameMode = forcedGameMode;
+                    if (getBlockedSpectators().contains(nmsData.profileId()) && gameMode == 3) {
+                        gameMode = 0;
                         rewriteEntry = rewritePacket = true;
                     }
                 }

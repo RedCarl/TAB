@@ -10,10 +10,7 @@ import me.neznamy.tab.shared.platform.TabPlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
-import java.util.WeakHashMap;
+import java.util.*;
 
 /**
  * Decorated class for TabList that tracks entries and their expected values.
@@ -36,16 +33,16 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
     /** Forced display names based on configuration, saving to restore them if another plugin overrides them */
     private final Map<UUID, TabComponent> forcedDisplayNames = Collections.synchronizedMap(new WeakHashMap<>());
 
-    /** Forced game modes by spectator fix, saving to restore them on packet sends */
-    private final Map<UUID, Integer> forcedGameModes = Collections.synchronizedMap(new WeakHashMap<>());
+    /** Players to change to survival gamemode instead of spectator */
+    private final Set<UUID> blockedSpectators = Collections.synchronizedSet(new java.util.HashSet<>());
 
     /** Header sent by the plugin */
     @Nullable
-    private TabComponent header;
+    protected TabComponent header;
 
     /** Footer sent by the plugin */
     @Nullable
-    private TabComponent footer;
+    protected TabComponent footer;
 
     @Override
     public void updateDisplayName(@NonNull UUID entry, @Nullable TabComponent displayName) {
@@ -86,7 +83,6 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
 
     @Override
     public void updateGameMode(@NonNull TabPlayer player, int gameMode) {
-        forcedGameModes.put(player.getTablistId(), gameMode);
         if (containsEntry(player.getTablistId()) && this.player.canSee(player)) {
             updateGameMode(player.getTablistId(), gameMode);
         }
@@ -117,7 +113,7 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
      * Not needed for platforms which support pipeline injection.
      */
     public void checkDisplayNames() {
-        // Empty by default, overridden by Sponge and Velocity
+        // Empty by default, overridden by Velocity
     }
 
     /**
@@ -126,7 +122,16 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
      * Not needed for platforms which support pipeline injection.
      */
     public void checkGameModes() {
-        // Empty by default, overridden by Sponge and Velocity
+        // Empty by default, overridden by Velocity
+    }
+
+    /**
+     * Checks if header and footer are as set by the plugin and if not,
+     * they are forced. Only works on platforms with a full TabList API.
+     * Not needed for platforms which support pipeline injection.
+     */
+    public void checkHeaderFooter() {
+        // Empty by default, overridden by Velocity
     }
 
     /**
@@ -139,6 +144,18 @@ public abstract class TrackedTabList<P extends TabPlayer> implements TabList {
     @NotNull
     public Object onPacketSend(@NonNull Object packet) {
         return packet;
+    }
+
+    @Override
+    public void blockSpectator(@NonNull TabPlayer player) {
+        blockedSpectators.add(player.getTablistId());
+        updateGameMode(player, 0);
+    }
+
+    @Override
+    public void unblockSpectator(@NonNull TabPlayer player) {
+        blockedSpectators.remove(player.getTablistId());
+        updateGameMode(player, player.getGamemode());
     }
 
     /**
